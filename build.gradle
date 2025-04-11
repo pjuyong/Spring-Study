@@ -39,3 +39,21 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+
+processResources {
+    dependsOn 'copyResources'
+}
+
+tasks.register('copyResources', Copy) {
+    from './Spring-Study-Config'
+    include '*.properties' // properties 관련 파일들을 등록한다는 의미
+    into 'src/main/resources/' // 등록 위치
+}
+
+test {
+    doFirst { // 모든 작업 시작 전 가장 먼저 실행
+        def profile = project.hasProperty('profile') ? project.property('profile').toString() : 'local'
+        jvmArgs = ["-Dspring.profiles.active=${profile}"]
+    }
+}
