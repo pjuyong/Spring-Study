@@ -1,0 +1,3 @@
+[submodule "Spring-Study-Config"]
+    path = Spring-Study-Config
+    url = https://github.com/pjuyong/Spring-Study-Config.git
