@@ -1,7 +1,10 @@
 package com.likelion.sbstudy.global.config;
 
+import com.likelion.sbstudy.global.config.CorsConfig;
+import com.likelion.sbstudy.global.security.CustomOAuth2UserService;
+import com.likelion.sbstudy.global.security.JwtAuthenticationFilter;
+import com.likelion.sbstudy.global.security.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,38 +14,21 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-  @Value("${swagger.auth.username}")
-  private String swaggerUsername;
-
-  @Value("${swagger.auth.password}")
-  private String swaggerPassword;
-
   private final CorsConfig corsConfig;
+  private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final CustomOAuth2UserService customOAuth2UserService;
+  private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
-  @Bean
-  public UserDetailsService userDetailsService() { // 사용자 정보를 조회
-    UserDetails swaggerUser =
-        User.builder()
-            .username(swaggerUsername)
-            .password(passwordEncoder().encode(swaggerPassword))
-            .roles("ADMIN")
-            .build();
-
-    return new InMemoryUserDetailsManager(swaggerUser); // UserDetail 객체 생성
-  }
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -53,7 +39,7 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
         // HTTP Basic 인증 기본 설정
         .httpBasic(Customizer.withDefaults())
-        // 세션을 생성하지 않음 (JWT 사용으로 인한 Stateless(무상태) 설정)
+        // 세션을 생성하지 않음 (JWT 사용으로 인한 Stateless 설정)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         // HTTP 요청에 대한 권한 설정
@@ -62,13 +48,20 @@ public class SecurityConfig {
                 request
                     // Swagger 경로 인증 필요
                     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
-                    .authenticated()
+                    .permitAll()
                     // 인증 없이 허용할 경로
                     .requestMatchers("/api/**")
                     .permitAll()
                     // 그 외 모든 요청은 모두 인증 필요
                     .anyRequest()
-                    .authenticated());
+                    .authenticated())
+        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .oauth2Login(oauth2 -> oauth2
+        .userInfoEndpoint(userInfo -> userInfo
+            .userService(customOAuth2UserService) // 사용자 정보 처리
+        )
+        .successHandler(oAuth2LoginSuccessHandler) // 로그인 성공 처리
+    );
     return http.build();
   }
 
