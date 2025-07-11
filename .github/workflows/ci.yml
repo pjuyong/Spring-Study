@@ -1,0 +1,85 @@
+name: CI with Gradle
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GIT_ACTION_TOKEN }}
+          submodules: true
+
+      - name: Update submodule
+        run: git submodule update --remote
+
+      - name: Filtering changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            application:
+            - 'build.gradle'
+            - 'src/**'
+
+      - name: Set up JDK 21
+        if: steps.changes.outputs.application == 'true'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle with cache
+        if: steps.changes.outputs.application == 'true'
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        if: steps.changes.outputs.application == 'true'
+        run: chmod +x gradlew
+
+      - name: Build with Gradle Wrapper
+        if: steps.changes.outputs.application == 'true'
+        run: ./gradlew clean build
+        env:
+          SPRING_PROFILES_ACTIVE: dev
+
+  code-style:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v4
+
+      - name: Filtering changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            application:
+            - 'build.gradle'
+            - 'src/**'  
+
+      - name: Set up JDK 21
+        if: steps.changes.outputs.application == 'true'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle with cache
+        if: steps.changes.outputs.application == 'true'
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Style check
+        if: steps.changes.outputs.application == 'true'
+        run: ./gradlew spotlessCheck --console=plain
