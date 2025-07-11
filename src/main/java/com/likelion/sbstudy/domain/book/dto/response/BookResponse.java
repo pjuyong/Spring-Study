@@ -1,27 +1,40 @@
 package com.likelion.sbstudy.domain.book.dto.response;
 
+import com.likelion.sbstudy.domain.book.entity.Category;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@Builder // 빌더를 만들었기 때문에 생성자를 만들 필요가 없음
-@Schema(title = "CreateBookResponse: 책 응답 DTO")
+@Builder
+@Schema(title = "BookResponse DTO", description = "책 정보 응답 반환")
 public class BookResponse {
 
-  @Schema(description = "책 일련번호", example = "1")
-  private Long bookId;
+  @Schema(description = "책 식별자", example = "1")
+  private Long id;
 
-  @Schema(description = "책 제목", example = "진격의거인")
+  @Schema(description = "책 제목", example = "그리고 아무도 없었다")
   private String title;
 
-  @Schema(description = "책 저자", example = "이사야마 하지메")
+  @Schema(description = "작가", example = "아가사 크리스티")
   private String author;
 
-  @Schema(description = "책 가격", example = "12000")
-  private int price;
+  @Schema(description = "출판사", example = "꿈나무책")
+  private String publisher;
 
-  @Schema(description = "책 정보", example = "진짜 영화 언제보냐")
-  private String content;
+  @Schema(description = "가격", example = "20000")
+  private Integer price;
 
+  @Schema(description = "책 설명", example = "한 곳에 초대된 사람들.. 그리고 하나 둘 죽어가는데..")
+  private String description;
+
+  @Schema(description = "출간날짜", example = "2025년 3월 22일")
+  private String releaseDate;
+
+  @Schema(description = "카테고리")
+  private List<Category> categoryList;
+
+  @Schema(description = "이미지 URL 리스트")
+  private List<String> bookImagesUrl;
 }

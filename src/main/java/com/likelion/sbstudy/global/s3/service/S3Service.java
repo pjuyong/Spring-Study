@@ -43,7 +43,7 @@ public class S3Service {
 
     ObjectMetadata metadata = new ObjectMetadata();
     metadata.setContentLength(file.getSize());
-    metadata.setContentType(file.getContentType());
+    metadata.setContentType(file.getContentType()); // 파일의 MIME 타입 (ex. application/pdf, image/png)
 
     try {
       amazonS3.putObject(
@@ -55,6 +55,9 @@ public class S3Service {
     }
   }
 
+  // Base64로 인코딩된 파일(주로 이미지)을 디코딩해서 AWS S3에 업로드하고
+  // 업로드 된 파일의 S3 Url을 반환하는 메서드
+  // 주로 프론트엔드에서 이미지나 파일을 Base64 문자열로 전송해오는 경우에 사용
   public String base64UploadFile(PathName pathName, String base64Url) {
     if (!validateBase64(base64Url)) {
       throw new CustomException(S3ErrorCode.INVALID_BASE64);
@@ -159,6 +162,7 @@ public class S3Service {
     }
   }
 
+  // 파일 유효성 검사 (파일 크기가 맞는지)
   private void validateFile(MultipartFile file) {
     if (file.getSize() > 5 * 1024 * 1024) {
       throw new CustomException(S3ErrorCode.FILE_SIZE_INVALID);
