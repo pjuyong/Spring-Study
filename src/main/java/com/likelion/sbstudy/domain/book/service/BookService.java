@@ -1,99 +1,62 @@
 package com.likelion.sbstudy.domain.book.service;
-
-import com.likelion.sbstudy.domain.book.converter.ToBookResponse;
 import com.likelion.sbstudy.domain.book.dto.request.CreateBookRequest;
-import com.likelion.sbstudy.domain.book.dto.request.SaveBookRequest;
-import com.likelion.sbstudy.domain.book.dto.request.UpdateBookRequest;
 import com.likelion.sbstudy.domain.book.dto.response.BookResponse;
-import com.likelion.sbstudy.domain.book.dto.response.CreateBookResponse;
-import com.likelion.sbstudy.domain.book.dto.response.SaveBookResponse;
-import com.likelion.sbstudy.domain.book.dto.response.UpdateBookResponse;
 import com.likelion.sbstudy.domain.book.entity.Book;
+import com.likelion.sbstudy.domain.book.entity.BookImage;
+import com.likelion.sbstudy.domain.book.exception.BookErrorCode;
+import com.likelion.sbstudy.domain.book.mapper.BookMapper;
 import com.likelion.sbstudy.domain.book.repository.BookRepository;
+import com.likelion.sbstudy.global.exception.CustomException;
+import com.likelion.sbstudy.global.s3.entity.PathName;
+import com.likelion.sbstudy.global.s3.service.S3Service;
 import jakarta.transaction.Transactional;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor // final 필드 생성자 자동 생성
 public class BookService {
 
   private final BookRepository bookRepository;
-  private final ToBookResponse toBookResponse;
+  private final S3Service s3Service;
+  private final BookMapper bookMapper;
 
-  // 책 생성
   @Transactional
-  public CreateBookResponse createBook(CreateBookRequest createBookRequest) {
+  public BookResponse createBook(CreateBookRequest request, List<MultipartFile> images) {
+
+    if (bookRepository.findByTitleAndAuthor(request.getTitle(), request.getAuthor()).isPresent()) {
+      throw new CustomException(BookErrorCode.BOOK_ALREADY_EXISTS);
+    }
+
     Book book = Book.builder()
-        .title(createBookRequest.getTitle())
-        .author(createBookRequest.getAuthor())
-        .price(createBookRequest.getPrice())
-        .content(createBookRequest.getContent())
-        .build();
-    bookRepository.save(book);
-
-    return toBookResponse.toCreateBookResponse(book);
-  }
-
-  // 책 정보 수정
-  @Transactional
-  public UpdateBookResponse updateBook(Long id, UpdateBookRequest updateBookRequest) {
-    Book book = bookRepository.findById(id)
-        .orElseThrow(() -> new IllegalArgumentException("책 정보를 찾을 수 없습니다."));
-
-    Book updateBook = Book.builder()
-        .id(book.getId())
-        .title(updateBookRequest.getTitle())
-        .author(updateBookRequest.getAuthor())
-        .price(updateBookRequest.getPrice())
-        .content(updateBookRequest.getContent())
+        .title(request.getTitle())
+        .author(request.getAuthor())
+        .publisher(request.getPublisher())
+        .price(request.getPrice())
+        .description(request.getDescription())
+        .categoryList(request.getCategoryList())
+        .releaseDate(request.getReleaseDate())
         .build();
 
-    bookRepository.save(book);
+    List<BookImage> bookImages = images.stream()
+        .filter(image -> !image.isEmpty())
+        .map(image -> {
+          String imageUrl = s3Service.uploadFile(PathName.FOLDER1, image);
+          return BookImage.builder()
+              .imageUrl(imageUrl)
+              .book(book)
+              .build();
+        })
+        .toList();
 
-    return toBookResponse.toUpdateeBookResponse(updateBook);
-  }
-
-  // 장바구니 등록
-  @Transactional
-  public SaveBookResponse saveBook(Long id, SaveBookRequest saveBookRequest) {
-    Book book = bookRepository.findById(id)
-        .orElseThrow(() -> new IllegalArgumentException("책 정보를 찾을 수 없습니다."));
-
-    Book saveBook = Book.builder()
-        .id(book.getId())
-        .title(saveBookRequest.getTitle())
-        .author(saveBookRequest.getAuthor())
-        .price(saveBookRequest.getPrice())
-        .build();
+    book.addBookImages(bookImages);
 
     bookRepository.save(book);
 
-    return toBookResponse.toSaveBookResponse(saveBook);
+    return bookMapper.toBookResponse(book);
   }
 
-  // 책 전체 조회
-  public List<BookResponse> getAllBooks() {
-    List<Book> books = bookRepository.findAll();
-    return books.stream().map(toBookResponse::toBookResponse).toList();
-  }
 
-  // 책 단일 조회
-  public BookResponse getBook(Long id) {
-    Book book = bookRepository.findById(id)
-        .orElseThrow(() -> new IllegalArgumentException("책 정보를 찾을 수 없습니다."));
-    return toBookResponse.toBookResponse(book);
-  }
-
-  // 책 삭제
-  @Transactional
-  public Boolean deleteBook(Long id) {
-    Book book = bookRepository.findById(id)
-        .orElseThrow(() -> new IllegalArgumentException("책 정보를 찾을 수 없습니다."));
-
-    bookRepository.deleteById(id);
-    return true;
-  }
 }
