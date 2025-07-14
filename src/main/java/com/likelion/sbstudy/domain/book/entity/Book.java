@@ -1,39 +1,59 @@
 package com.likelion.sbstudy.domain.book.entity;
 
 import com.likelion.sbstudy.global.common.BaseTimeEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Entity // 이 클래스는 DB의 테이블과 매핑 됨.
+@Entity
 @Getter
 @Builder
-@NoArgsConstructor // 기본 생성자 자동 생성
-@AllArgsConstructor // 모든 인자를 받는 생성자 자동 생성
-@Table(name = "books") // 매핑할 테이블 이름
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Table(name = "book")
 public class Book extends BaseTimeEntity {
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id; // 책 일련번호
+  private Long id;
 
-  @Column(nullable = false)
-  private String title; // 책 제목
+  @Column(name = "title", nullable = false)
+  private String title;
 
-  @Column(nullable = false)
-  private String author; // 책 저자
+  @Column(name = "author", nullable = false)
+  private String author;
 
-  @Column(nullable = false)
-  private int price; // 책 가격
+  @Column(name = "publisher", nullable = false)
+  private String publisher;
 
-  @Column(nullable = false)
-  private String content; // 책 정보
+  @Column(name = "price", nullable = false)
+  private Integer price;
 
+  @Column(name = "description", nullable = false)
+  private String description;
 
+  @Column(name = "release_date", nullable = false)
+  private String releaseDate;
+
+  @Column(name = "category_list", nullable = false)
+  private List<Category> categoryList;
+
+  @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<BookImage> bookImages = new ArrayList<>();
+
+  public void addBookImages(List<BookImage> bookImages) {
+    this.bookImages = bookImages;
+  }
 }
